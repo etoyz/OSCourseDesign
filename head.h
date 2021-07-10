@@ -11,6 +11,7 @@ using namespace std;
 #define INODESIZE  32		// i节点的大小
 #define INODENUM   32		// i节点的数目
 #define FILENUM    8		// 打开文件表的数目
+#define BLKOFFSET  INODESIZE*INODENUM+BLKNUM
 #define HOSTNAME   "OSCD" 	// 主机名
 
 // 用户(20B)
