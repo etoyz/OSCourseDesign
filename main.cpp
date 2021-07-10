@@ -3,7 +3,7 @@
 
 char	choice;
 vector<string> vc_of_str;
-string	s1, s2;
+string	cmd1, cmd2;
 int		cur_loc; // 当前目录
 char	tmp[2 * BLKSIZE]; // 缓冲区
 User	user; // 当前的用户
@@ -18,7 +18,7 @@ const string Commands[] = { "help", "cd", "ls", "mkdir", "touch", "open","cat", 
 
 // bin/xx 给出进入bin即可
 int readby() {	//根据当前目录和第二个参数确定转过去的目录
-	int result_cur = 0; string s = s2;
+	int result_cur = 0; string s = cmd2;
 	if (s.find('/') != -1) {
 		s = s.substr(0, s.find_last_of('/') + 1);
 	}
@@ -80,8 +80,7 @@ int readby() {	//根据当前目录和第二个参数确定转过去的目录
 }
 
 //创建磁盘映像，并将所有用户和文件清除
-void format(void)
-{
+void format(void) {
 	int   i;
 	printf("Formating filesystem...\n");
 	printf("All the old data will lost!!!\n");
@@ -201,8 +200,7 @@ void login() {
 }
 
 // 功能: 将所有i节点读入内存
-void init(void)
-{
+void init(void) {
 	if ((fp = fopen(image_name, "r+b")) == NULL)
 	{
 		printf("Can't open file %s.\n", image_name);
@@ -274,18 +272,17 @@ void StrListForAdd() {
 }
 
 // 结果: 0-14为系统命令, 15为命令错误
-int analyse()
-{
-	string s = ""; s1 = ""; s2 = "";
+int cmd_analyze() {
+	string s = "";
 	int res = 0;
 	while (1) {
 		if (s.find(' ') == -1) { // 如果不含空格，则是无参数的命令
-			s1 = s;
-			s2 = "";
+			cmd1 = s;
+			cmd2 = "";
 		}
 		else { //否则是有参数的命令
-			s1 = s.substr(0, s.find_first_of(' '));
-			s2 = s.substr(s.find_first_of(' ') + 1);
+			cmd1 = s.substr(0, s.find_first_of(' '));
+			cmd2 = s.substr(s.find_first_of(' ') + 1);
 		}
 		int ch = getch();
 		if (ch == 8) {				//退格
@@ -298,7 +295,8 @@ int analyse()
 		}
 		else if (ch == 13) {		//回车
 			for (res = 0; res < 16; res++) {
-				if (s1 == Commands[res])break;
+				if (cmd1 == Commands[res])
+					break;
 			}
 			break;
 		}
@@ -307,16 +305,12 @@ int analyse()
 			s.push_back(ch);
 		}
 	}
-	if (s1 == "") {
-		return -1;
-	}
 	printf("\n");
 	return res;
 }
 
 // 功能: 将num号i节点保存到hd.dat
-void save_inode(int num)
-{
+void save_inode(int num) {
 	if ((fp = fopen(image_name, "r+b")) == NULL)
 	{
 		printf("Can't open file %s\n", image_name);
@@ -328,8 +322,7 @@ void save_inode(int num)
 }
 
 // 功能: 申请一个数据块
-int get_blknum(void)
-{
+int get_blknum(void) {
 	int i;
 	for (i = 0; i < BLKNUM; i++)
 		if (bitmap[i] == '0') break;
@@ -352,8 +345,7 @@ int get_blknum(void)
 }
 
 // 功能: 将i节点号为num的文件读入tmp 
-void read_blk(int num)
-{
+void read_blk(int num) {
 	int  i, len;
 	char ch;
 	int  add0, add1;
@@ -388,8 +380,7 @@ void read_blk(int num)
 }
 
 // 功能: 将tmp的内容输入hd的数据区
-void write_blk(int num)
-{
+void write_blk(int num) {
 	int  i, len;
 	int  add0, add1;
 	add0 = inode_array[num].address[0];
@@ -414,8 +405,7 @@ void write_blk(int num)
 }
 
 // 功能: 释放文件块号为num的文件占用的空间
-void release_blk(int num)
-{
+void release_blk(int num) {
 	FILE* fp;
 	if ((fp = fopen(image_name, "r+b")) == NULL)
 	{
@@ -450,8 +440,7 @@ void help() {
 
 
 //设置文件路径
-void pathset()
-{
+void pathset() {
 	string s;
 	if (inode_array[cur_loc].inum == 0)s = "";
 	else {
@@ -467,14 +456,13 @@ void pathset()
 
 
 // 功能: 切换目录(cd .. 或者 cd dir1)
-void cd()
-{
+void cd() {
 	int tmp_cur;
-	if (s2.length() == 0) {
+	if (cmd2.length() == 0) {
 		tmp_cur = 0;
 	}
 	else {
-		if (s2[s2.length() - 1] != '/')s2 += '/';
+		if (cmd2[cmd2.length() - 1] != '/')cmd2 += '/';
 		tmp_cur = readby();
 	}
 	if (tmp_cur != -1) {
@@ -486,15 +474,14 @@ void cd()
 }
 
 // 功能: 显示当前目录下的子目录和文件(dir)
-void dir(void)
-{
+void dir(void) {
 	int tmp_cur;
 	int i = 0;
-	if (s2.length() == 0) {
+	if (cmd2.length() == 0) {
 		tmp_cur = cur_loc;
 	}
 	else {
-		if (s2[s2.length() - 1] != '/')s2 += '/';
+		if (cmd2[cmd2.length() - 1] != '/')cmd2 += '/';
 		tmp_cur = readby();
 		if (tmp_cur == -1 || inode_array[tmp_cur].type != 'd') {
 			cout << "No Such Directory" << endl;
@@ -532,13 +519,12 @@ void rm(int inode) {
 }
 
 //rmdir dir或rmdir dir/a/b
-void rmdir()
-{
-	if (s2.length() == 0) {
+void rmdir() {
+	if (cmd2.length() == 0) {
 		printf("No Such Directory\n");
 		return;
 	}
-	if (s2[s2.length() - 1] != '/')s2 += '/';
+	if (cmd2[cmd2.length() - 1] != '/')cmd2 += '/';
 	int tmp_cur = readby();
 	if (tmp_cur == -1)printf("No Such Directory\n");
 	else {
@@ -561,17 +547,16 @@ void rmdir()
 }
 
 // 功能: 在当前目录下创建子目录(mkdir dir1)
-void mkdir(void)
-{
+void mkdir(void) {
 	int i;
-	if (s2.length() == 0) {
+	if (cmd2.length() == 0) {
 		cout << "Please input name" << endl;
 		return;
 	}
 	// 遍历i节点数组, 查找未用的i节点
 	for (i = 0; i < INODENUM; i++) {
 		if (inode_array[i].iparent == cur_loc && inode_array[i].type == 'd'
-			&& inode_array[i].file_name == s2 && inode_array[i].inum > 0
+			&& inode_array[i].file_name == cmd2 && inode_array[i].inum > 0
 			&& !strcmp(inode_array[i].user_name, user.user_name)) {
 			break;
 		}
@@ -588,7 +573,7 @@ void mkdir(void)
 		exit(-1);
 	}
 	inode_array[i].inum = i;
-	strcpy(inode_array[i].file_name, s2.data());
+	strcpy(inode_array[i].file_name, cmd2.data());
 	inode_array[i].type = 'd';
 	strcpy(inode_array[i].user_name, user.user_name);
 	inode_array[i].iparent = cur_loc;
@@ -597,24 +582,23 @@ void mkdir(void)
 }
 
 // 功能: 在当前目录下创建文件(creat file1)
-void touch(void)
-{
-	if (s2.length() == 0) {
+void touch(void) {
+	if (cmd2.length() == 0) {
 		printf("Please input filename.\n");
 		return;
 	}
 	int i, tmp_cur; string tmps1, tmps2;
-	if (s2.find('/') != -1) {
-		tmps1 = s2.substr(0, s2.find_last_of('/') + 1);
-		tmps2 = s2.substr(s2.find_last_of('/') + 1);
-		s2 = tmps1;
+	if (cmd2.find('/') != -1) {
+		tmps1 = cmd2.substr(0, cmd2.find_last_of('/') + 1);
+		tmps2 = cmd2.substr(cmd2.find_last_of('/') + 1);
+		cmd2 = tmps1;
 		tmp_cur = readby();
 		if (tmp_cur == -1) {
 			printf("No Such Directory\n");
 		}
 	}
 	else {
-		tmps2 = s2;
+		tmps2 = cmd2;
 		tmp_cur = cur_loc;
 	}
 	for (i = 0; i < INODENUM; i++)
@@ -644,8 +628,7 @@ void touch(void)
 }
 
 //检查当前I节点的文件是否属于当前用户
-int check(int i)
-{
+int check(int i) {
 	int j;
 	char* uuser, * fuser;
 	uuser = user.user_name;
@@ -658,24 +641,24 @@ int check(int i)
 void open(int mymode) {
 	/*功能: 打开当前目录下的文件(open file1)*/
 	int i, inum, mode, filenum, chk;
-	if (s2.length() == 0) {
+	if (cmd2.length() == 0) {
 		printf("This file doesn't exist.\n");
 		return;
 	}
 	int tmp_cur; string tmps1, tmps2;
-	if (s2.find('/') != -1) {
-		tmps1 = s2.substr(0, s2.find_last_of('/') + 1);
-		tmps2 = s2.substr(s2.find_last_of('/') + 1);
-		string tmps = s2;
-		s2 = tmps1;
+	if (cmd2.find('/') != -1) {
+		tmps1 = cmd2.substr(0, cmd2.find_last_of('/') + 1);
+		tmps2 = cmd2.substr(cmd2.find_last_of('/') + 1);
+		string tmps = cmd2;
+		cmd2 = tmps1;
 		tmp_cur = readby();
-		s2 = tmps;
+		cmd2 = tmps;
 		if (tmp_cur == -1) {
 			cout << "No Such Directory" << endl;
 		}
 	}
 	else {
-		tmps2 = s2;
+		tmps2 = cmd2;
 		tmp_cur = cur_loc;
 	}
 	for (i = 0; i < INODENUM; i++)
@@ -711,16 +694,16 @@ void close() {
 	/*功能: 关闭已经打开的文件(close file1)*/
 	int i;
 	int tmp_cur; string tmps1, tmps2;
-	if (s2.find('/') != -1) {
-		tmps1 = s2.substr(0, s2.find_last_of('/') + 1);
-		tmps2 = s2.substr(s2.find_last_of('/') + 1);
-		string tmps = s2;
-		s2 = tmps1;
+	if (cmd2.find('/') != -1) {
+		tmps1 = cmd2.substr(0, cmd2.find_last_of('/') + 1);
+		tmps2 = cmd2.substr(cmd2.find_last_of('/') + 1);
+		string tmps = cmd2;
+		cmd2 = tmps1;
 		tmp_cur = readby();
-		s2 = tmps;
+		cmd2 = tmps;
 	}
 	else {
-		tmps2 = s2;
+		tmps2 = cmd2;
 		tmp_cur = cur_loc;
 	}
 	for (i = 0; i < FILENUM; i++)
@@ -738,16 +721,16 @@ void cat() {
 	int i, inum;
 	open(1);
 	string tmps1, tmps2; int tmp_cur;
-	if (s2.find('/') != -1) {
-		tmps1 = s2.substr(0, s2.find_last_of('/') + 1);
-		tmps2 = s2.substr(s2.find_last_of('/') + 1);
-		string tmps = s2;
-		s2 = tmps1;
+	if (cmd2.find('/') != -1) {
+		tmps1 = cmd2.substr(0, cmd2.find_last_of('/') + 1);
+		tmps2 = cmd2.substr(cmd2.find_last_of('/') + 1);
+		string tmps = cmd2;
+		cmd2 = tmps1;
 		tmp_cur = readby();
-		s2 = tmps;
+		cmd2 = tmps;
 	}
 	else {
-		tmps2 = s2;
+		tmps2 = cmd2;
 		tmp_cur = cur_loc;
 	}
 	for (i = 0; i < FILENUM; i++)
@@ -764,16 +747,15 @@ void cat() {
 	close();
 }
 
-
 void vi() {
 	/*功能: 向文件中写入字符(write file1)*/
 	int i, inum, length;
 	open(3);
 	for (i = 0; i < FILENUM; i++)
 		if ((file_table[i].inum > 0) &&
-			s2 == file_table[i].file_name) break;
+			cmd2 == file_table[i].file_name) break;
 	if (i == FILENUM) {
-		cout << "Open " << s2 << " false.\n";
+		cout << "Open " << cmd2 << " false.\n";
 		return;
 	}
 	inum = file_table[i].inum;
@@ -850,7 +832,7 @@ void su() {
 										  return;
 										  }*/
 	do {
-		user_name = s2;
+		user_name = cmd2;
 		printf("password:");
 		p = password;
 		while (*p = _getch()) {
@@ -887,8 +869,7 @@ void su() {
 }
 
 //根据Inode节点号删存储
-void delet(int innum)
-{
+void delet(int innum) {
 
 	inode_array[innum].inum = -1;
 	if (inode_array[innum].length >= 0)
@@ -900,22 +881,20 @@ void delet(int innum)
 	save_inode(innum);
 }
 
-// 功能: 删除文件
-void rmfile(void)
-{
-	if (s2.length() == 0) {
+void rmfile(void) {
+	if (cmd2.length() == 0) {
 		printf("This file doesn't exist.\n");
 		return;
 	}
 	int i, tmp_cur; string tmps1, tmps2;
-	if (s2.find('/') != -1) {
-		tmps1 = s2.substr(0, s2.find_last_of('/') + 1);
-		tmps2 = s2.substr(s2.find_last_of('/') + 1);
-		s2 = tmps1;
+	if (cmd2.find('/') != -1) {
+		tmps1 = cmd2.substr(0, cmd2.find_last_of('/') + 1);
+		tmps2 = cmd2.substr(cmd2.find_last_of('/') + 1);
+		cmd2 = tmps1;
 		tmp_cur = readby();
 	}
 	else {
-		tmps2 = s2;
+		tmps2 = cmd2;
 		tmp_cur = cur_loc;
 	}
 	for (i = 0; i < INODENUM; i++)
@@ -932,43 +911,36 @@ void rmfile(void)
 	delet(i);
 }
 
-// 功能: 退出当前用户(logout)
-void logout()
-{
+void logout() {
 	login();
 }
 
 
 // 功能: 退出文件系统(quit)
-void quit()
-{
+void quit() {
 	printf("Bye~\n");
 	exit(0);
 }
 
 // 功能: 显示错误
-void errcmd()
-{
+void errcmd() {
 	printf("Command Error!!!\n");
 }
 
 //清空内存中存在的用户名
-void free_user()
-{
+void free_user() {
 	int i;
 	for (i = 0; i < 10; i++)
 		user.user_name[i] = '\0';
 }
 // 功能: 循环执行用户输入的命令, 直到logout
 // "help", "cd", "dir", "mkdir", "touch", "open","read", "write", "close", "delete", "logout", "clear", "format","quit","rd"
-
-void command(void)
-{
+void command(void) {
 	system("cls");
 	do
 	{
 		pathset();
-		switch (analyse())
+		switch (cmd_analyze())
 		{
 		case -1:
 			printf("\n");
@@ -1033,10 +1005,8 @@ void command(void)
 	} while (1);
 }
 
-
 // 主函数
-int main(void)
-{
+int main(void) {
 	login();
 	init();
 	command();
