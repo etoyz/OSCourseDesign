@@ -10,8 +10,8 @@ User	user; // 当前的用户
 char	bitmap[BLKNUM];	// 位图数组
 Inode	inode_array[INODENUM]; // i节点数组
 File_table file_array[FILENUM]; // 打开文件表数组
-char	image_name[10] = "hd.dat"; // 文件系统名称
-FILE*	fp; // 打开文件指针
+char	image_name[10] = "image.dat"; // 文件系统名称
+FILE*	fp; // 文件指针
 
 // 支持命令 "help", "cd", "dir", "mkdir", "touch", "open","read", "write", "close", "delete", "logout", "clear", "format","quit","rd"
 const string Commands[] = { "help", "cd", "ls", "mkdir", "touch", "open","cat", "vi", "close", "rm", "su", "clear", "format","exit","rmdir","df" };
@@ -78,19 +78,19 @@ int readby() {	//根据当前目录和第二个参数确定转过去的目录
 	result_cur = tmp_cur;
 	return result_cur;
 }
-//创建映像hd，并将所有用户和文件清除
+
+//创建磁盘映像，并将所有用户和文件清除
 void format(void)
 {
-	FILE* fp;
 	int   i;
-	Inode inode;
-	printf("FileSystem will be  format \n");
-	printf("All the data will lost!!!\n");
+	printf("Formating filesystem...\n");
+	printf("All the old data will lost!!!\n");
 	printf("Are you sure format the fileSystem?(Y/N)?");
 	scanf("%c", &choice);
 	gets(tmp);   //更改
 	if ((choice == 'y') || (choice == 'Y'))
 	{
+		// 打开映像文件
 		fp = fopen(image_name, "w+b");
 		if (fp == NULL)
 		{
@@ -98,10 +98,10 @@ void format(void)
 			getchar();
 			exit(-1);
 		}
-
 		//成功打开后，位图数组置0
 		for (i = 0; i < BLKSIZE; i++)
-			fputc('0', fp);   //
+			fputc('0', fp);
+		Inode inode;
 		inode.inum = 0;
 		inode.iparent = 0;
 		inode.length = 0;
@@ -119,7 +119,7 @@ void format(void)
 		for (i = 0; i < BLKNUM * BLKSIZE; i++)
 			fputc('\0', fp);
 		fclose(fp);
-		//清除用户信息
+		//初始化用户文件
 		fp = fopen("user.txt", "w+");
 		if (fp == NULL)
 		{
@@ -127,41 +127,40 @@ void format(void)
 			exit(-1);
 		}
 		fclose(fp);
-		printf("Filesystem created successful.Please first login!\n");
-	}
+		printf("Filesystem created successful.Please login!\n");
+	} else
+		quit();
 	return;
 }
 
-
+/*功能: 用户登陆，如果是新用户则创建用户*/
 void login() {
-	/*功能: 用户登陆，如果是新用户则创建用户*/
-	char* p;
-	int  flag;
+	// 先检查文件系统是否存在
+	if ((fp = fopen("user.txt", "r+")) == NULL) {
+		printf("Unable to load filesystem, trying to repair now...\n");
+		format(); 
+		login();
+	}
+	int  flag = 0;
 	char user_name[10];
 	char password[10];
-	char file_name[10] = "user.txt";
 	char choice;    //选择是否（y/n）
 	do {
-		printf("login:");
+		// 输入用户名、密码
+		printf("username:");
 		gets(user_name);
 		printf("password:");
-		p = password;
-		while (*p = _getch()) {
-			if (*p == 0x0d) //当输入回车键时，0x0d为回车键的ASCII码
+		char* p = password;
+		while (*p = getch()) {
+			if (*p == 0x0d) //当输入回车时
 			{
-				*p = '\0'; //将输入的回车键转换成空格
+				*p = '\0'; //将输入的回车符转换成字符串结束符
 				break;
 			}
 			printf("*");   //将输入的密码以"*"号显示
 			p++;
 		}
-		flag = 0;
-		if ((fp = fopen(file_name, "r+")) == NULL) {
-			printf("\nCan't open file %s.\n", file_name);
-			printf("This filesystem is not exist now, it will be create~~~\n");
-			format();     //黄春伟负责这个模块 
-			login();
-		}
+		// 校验用户名、密码
 		while (!feof(fp)) {
 			fread(&user, sizeof(User), 1, fp);
 			// 已经存在的用户, 且密码正确
@@ -169,27 +168,26 @@ void login() {
 				!strcmp(user.password, password)) {
 				fclose(fp);
 				printf("\n");
-				return;     //登陆成功，直接跳出登陆函数 
+				return;//校验成功，直接跳出登陆函数 
 			}
 			// 已经存在的用户, 但密码错误
 			else if (!strcmp(user.user_name, user_name)) {
-				printf("\nThis user is exist, but password is incorrect.\n");
-				flag = 1;    //设置flag为1，表示密码错误，重新登陆 
+				printf("\nPassword incorrect!\n");
+				flag = 1;    //密码错误，重新登陆 
 				fclose(fp);
 				break;
 			}
-		}
-		if (flag == 0) {
-			printf("\nThis user is not exist.\n");
-			break;    //用户不存在，先跳出循环创建新用户 
+			// 不存在的用户名
+			else {
+				printf("\nThis user is not exist.\n");
+				break;//用户不存在，先跳出循环创建新用户 
+			}
 		}
 	} while (flag);
-
 	// 创建新用户
 	if (flag == 0) {
 		printf("\nDo you want to creat a new user?(y/n):");
 		scanf("%c", &choice);
-		//gets(tmp);
 		if ((choice == 'y') || (choice == 'Y')) {
 			strcpy(user.user_name, user_name);
 			strcpy(user.password, password);
@@ -198,13 +196,11 @@ void login() {
 			return;
 		}
 		if ((choice == 'n') || (choice == 'N'))
-			login();
+			quit();
 	}
 }
 
-
 // 功能: 将所有i节点读入内存
-
 void init(void)
 {
 	int   i;
@@ -543,7 +539,7 @@ void pathset()
 			tmp = inode_array[tmp].iparent;
 		}
 	}
-	cout << user.user_name << "@" << "4423" << ":~" << s << "# ";
+	cout << user.user_name << "@" << HOSTNAME << ":~" << s << "# ";
 }
 
 
@@ -565,7 +561,6 @@ void cd()
 		cout << "No Such Directory" << endl;
 	}
 }
-
 
 // 功能: 显示当前目录下的子目录和文件(dir)
 void dir(void)
@@ -725,8 +720,6 @@ void touch(void)
 	save_inode(i);
 }
 
-
-
 //检查当前I节点的文件是否属于当前用户
 int check(int i)
 {
@@ -738,7 +731,6 @@ int check(int i)
 	if (j == 0)  return 1;
 	else      return 0;
 }
-
 
 void open(int mymode) {
 	/*功能: 打开当前目录下的文件(open file1)*/
@@ -1027,12 +1019,8 @@ void logout()
 // 功能: 退出文件系统(quit)
 void quit()
 {
-	char choice;
-	printf("Do you want to exist(y/n):");
-	scanf("%c", &choice);
-	gets(tmp);
-	if ((choice == 'y') || (choice == 'Y'))
-		exit(-1);
+	printf("Bye~\n");
+	exit(0);
 }
 
 // 功能: 显示错误

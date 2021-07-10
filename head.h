@@ -11,12 +11,13 @@ using namespace std;
 #define INODESIZE  32		// i节点的大小
 #define INODENUM   32		// i节点的数目
 #define FILENUM    8		// 打开文件表的数目
+#define HOSTNAME   "OSCD" 	// 主机名
 
 // 用户(20B)
 typedef struct
 {
-	char user_name[10];	    // 用户名
-	char password[10];	    // 密码
+	char user_name[15];	    // 用户名
+	char password[15];	    // 密码
 } User;
 
 // i节点(32B)
@@ -41,7 +42,7 @@ typedef struct
 	short offset;        // 偏移量
 } File_table;
 
-// 申明函数
+//声明函数
 void login(void);
 void init(void);
 int  analyse();
