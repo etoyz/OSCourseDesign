@@ -9,7 +9,7 @@ char	tmp[2 * BLKSIZE]; // 缓冲区
 User	user; // 当前的用户
 char	bitmap[BLKNUM];	// 位图数组
 Inode	inode_array[INODENUM]; // i节点数组
-File_table file_array[FILENUM]; // 打开文件表数组
+File_table file_table[FILENUM]; // 打开文件表数组
 char	image_name[10] = "image.dat"; // 文件系统名称
 FILE*	fp; // 文件指针
 
@@ -203,25 +203,24 @@ void login() {
 // 功能: 将所有i节点读入内存
 void init(void)
 {
-	int   i;
 	if ((fp = fopen(image_name, "r+b")) == NULL)
 	{
 		printf("Can't open file %s.\n", image_name);
 		exit(-1);
 	}
 	// 读入位图
-	for (i = 0; i < BLKNUM; i++)
+	for (int i = 0; i < BLKNUM; i++)
 		bitmap[i] = fgetc(fp);
 	// 显示位图
 	// 读入i节点信息
-	for (i = 0; i < INODENUM; i++)
+	for (int i = 0; i < INODENUM; i++)
 		fread(&inode_array[i], sizeof(Inode), 1, fp);
 	// 显示i节点
 	// 当前目录为根目录
 	cur_loc = 0;
 	// 初始化打开文件表
-	for (i = 0; i < FILENUM; i++)
-		file_array[i].inum = -1;
+	for (int i = 0; i < FILENUM; i++)
+		file_table[i].inum = -1;
 }
 
 void df() {
@@ -281,27 +280,15 @@ int analyse()
 	int tabcount = 0;
 	int res = 0;
 	while (1) {
-		s1 = s;
-		if (s.find(' ') == -1)s2 = "";
-		else {
-			while (s1.length() > 0 && s1[s1.length() - 1] == ' ') {
-				s1 = s1.substr(0, s1.length() - 1);
-			}
-			while (s1.length() > 0 && s1[0] == ' ') {
-				s1 = s1.substr(1);
-			}
-			if (s1.find(' ') == -1)s2 = "";
-			else
-				s2 = s1.substr(s1.find_first_of(' ') + 1);
-			while (s2.length() > 0 && s2[s2.length() - 1] == ' ') {
-				s2 = s2.substr(0, s2.length() - 1);
-			}
-			while (s2.length() > 0 && s2[0] == ' ') {
-				s2 = s2.substr(1);
-			}
-			s1 = s1.substr(0, s1.find_first_of(' '));
+		if (s.find(' ') == -1) { // 如果不含空格，则是无参数的命令
+			s1 = s;
+			s2 = "";
 		}
-		int ch = _getch();
+		else { //否则是有参数的命令
+			s1 = s.substr(0, s.find_first_of(' '));
+			s2 = s.substr(s.find_first_of(' ') + 1);
+		}
+		int ch = getch();
 		if (ch == 8) {				//退格
 			if (!s.empty()) {
 				printf("%c", 8);
@@ -367,10 +354,6 @@ int analyse()
 				tabcount = -1;
 			}
 
-		}
-		else if (ch == ' ') {
-			printf("%c", ch);
-			s.push_back(ch);
 		}
 		else {
 			printf("%c", ch);
@@ -778,10 +761,10 @@ void open(int mymode) {
 		return;
 	}
 	filenum = i;
-	file_array[filenum].inum = inum;
-	strcpy(file_array[filenum].file_name, inode_array[inum].file_name);
-	file_array[filenum].mode = mode;
-	file_array[filenum].offset = 0;
+	file_table[filenum].inum = inum;
+	strcpy(file_table[filenum].file_name, inode_array[inum].file_name);
+	file_table[filenum].mode = mode;
+	file_table[filenum].offset = 0;
 }
 
 void close() {
@@ -801,14 +784,14 @@ void close() {
 		tmp_cur = cur_loc;
 	}
 	for (i = 0; i < FILENUM; i++)
-		if ((file_array[i].inum > 0) &&
-			(tmps2 == file_array[i].file_name)) break;
+		if ((file_table[i].inum > 0) &&
+			(tmps2 == file_table[i].file_name)) break;
 	if (i == FILENUM) {
 		printf("This file didn't be opened.\n");
 		return;
 	}
 	else
-		file_array[i].inum = -1;
+		file_table[i].inum = -1;
 }
 
 void cat() {
@@ -828,10 +811,10 @@ void cat() {
 		tmp_cur = cur_loc;
 	}
 	for (i = 0; i < FILENUM; i++)
-		if ((file_array[i].inum > 0) &&
-			(tmps2 == file_array[i].file_name))
+		if ((file_table[i].inum > 0) &&
+			(tmps2 == file_table[i].file_name))
 			break;
-	inum = file_array[i].inum;
+	inum = file_table[i].inum;
 	if (inode_array[inum].length > 0) {
 		read_blk(inum);
 		for (i = 0; tmp[i] != '\0'; i++)
@@ -847,13 +830,13 @@ void vi() {
 	int i, inum, length;
 	open(3);
 	for (i = 0; i < FILENUM; i++)
-		if ((file_array[i].inum > 0) &&
-			s2 == file_array[i].file_name) break;
+		if ((file_table[i].inum > 0) &&
+			s2 == file_table[i].file_name) break;
 	if (i == FILENUM) {
 		cout << "Open " << s2 << " false.\n";
 		return;
 	}
-	inum = file_array[i].inum;
+	inum = file_table[i].inum;
 	//printf("The length of %s:%d\n", inode_array[inum].file_name, inode_array[inum].length);
 	if (inode_array[inum].length == 0) {
 		printf("The length you want to write(0-1024):");
