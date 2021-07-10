@@ -277,7 +277,6 @@ void StrListForAdd() {
 int analyse()
 {
 	string s = ""; s1 = ""; s2 = "";
-	int tabcount = 0;
 	int res = 0;
 	while (1) {
 		if (s.find(' ') == -1) { // 如果不含空格，则是无参数的命令
@@ -303,68 +302,9 @@ int analyse()
 			}
 			break;
 		}
-		else if (ch == 9) {			//tab
-			int count = 0; vector<int>v;
-			string tstr;
-			if (s.find(' ') != -1) {
-				tstr = s.substr(s.find_last_of(' ') + 1);
-				if (tstr.find('/') != -1) {
-					tstr = tstr.substr(tstr.find_last_of('/') + 1);
-				}
-				StrListForAdd();
-			}
-			else {
-				tstr = s;
-				StrListForCom();
-			}
-			for (unsigned int i = 0; i < vc_of_str.size(); i++) {
-				if (vc_of_str[i].length() >= tstr.length() && vc_of_str[i].substr(0, tstr.length()) == tstr) {
-					count++; v.push_back(i);
-				}
-			}
-			//cout << "count:" << count<<endl;
-			//cout << "tstr:" << tstr<<endl;
-			if (count < 1) {
-				if (s.find(' ') == -1) {
-					s.push_back(' ');
-					printf(" ");
-				}
-				tabcount = -1;
-			}
-			if (count == 1) {
-				for (unsigned int i = tstr.length(); i < vc_of_str[v[0]].length(); i++) {
-					s.push_back(vc_of_str[v[0]][i]);
-					printf("%c", vc_of_str[v[0]][i]);
-				}
-				if (s.find(' ') == -1) {
-					s.push_back(' ');
-					printf(" ");
-				}
-				tabcount = -1;
-			}
-			if (count > 1 && tabcount) {
-				cout << "\n";
-				cout << vc_of_str[v[0]];
-				for (unsigned int i = 1; i < v.size(); i++) {
-					cout << "    " << vc_of_str[v[i]];
-				}
-				cout << endl;
-				pathset();
-				cout << s;
-				tabcount = -1;
-			}
-
-		}
 		else {
 			printf("%c", ch);
 			s.push_back(ch);
-		}
-		//用于处理按两次tab
-		if (ch == 9) {
-			tabcount++;
-		}
-		else {
-			tabcount = 0;
 		}
 	}
 	if (s1 == "") {
