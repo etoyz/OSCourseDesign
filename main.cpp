@@ -195,7 +195,7 @@ void login() {
 			fclose(fp);
 			return;
 		}
-		if ((choice == 'n') || (choice == 'N'))
+		else
 			quit();
 	}
 }
