@@ -85,7 +85,7 @@ void format(void) {
             exit(-1);
         }
         //成功打开后，位图数组置0
-        for (i = 0; i < BLKSIZE; i++)
+        for (i = 0; i < BLKNUM; i++)
             fputc('0', fp);
         Inode inode;
         inode.inum = 0;
@@ -227,7 +227,7 @@ void save_inode(int num) {
         printf("Can't open file %s\n", image_name);
         exit(-1);
     }
-    fseek(fp, 512 + num * sizeof(Inode), SEEK_SET);
+    fseek(fp, BLKNUM + num * sizeof(Inode), SEEK_SET);
     fwrite(&inode_array[num], sizeof(Inode), 1, fp);
     fclose(fp);
 }
@@ -261,7 +261,7 @@ void read_blk(int num) {
     int add0, add1;
     len = inode_array[num].length;
     add0 = inode_array[num].address[0];
-    if (len > 512)
+    if (len > BLKSIZE)
         add1 = inode_array[num].address[1];
     if ((fp = fopen(image_name, "r+b")) == NULL) {
         printf("Can't open file %s.\n", image_name);
@@ -269,11 +269,11 @@ void read_blk(int num) {
     }
     fseek(fp, BLKOFFSET + add0 * BLKSIZE, SEEK_SET); // 前1536是
     ch = fgetc(fp);
-    for (i = 0; (i < len) && (ch != '\0') && (i < 512); i++) {
+    for (i = 0; (i < len) && (ch != '\0') && (i < BLKSIZE); i++) {
         tmp[i] = ch;
         ch = fgetc(fp);
     }
-    if (i >= 512) {
+    if (i >= BLKSIZE) {
         fseek(fp, BLKOFFSET + add1 * BLKSIZE, SEEK_SET);
         ch = fgetc(fp);
         for (; (i < len) && (ch != '\0'); i++) {
@@ -296,11 +296,11 @@ void write_blk(int num) {
         exit(-1);
     }
     fseek(fp, BLKOFFSET + add0 * BLKSIZE, SEEK_SET);
-    for (i = 0; (i < len) && (tmp[i] != '\0') && (i < 512); i++)
+    for (i = 0; (i < len) && (tmp[i] != '\0') && (i < BLKSIZE); i++)
         fputc(tmp[i], fp);
-    if (i == 512) {
+    if (i == BLKSIZE) {
         add1 = inode_array[num].address[1];
-        fseek(fp, 1536 + add1 * BLKSIZE, SEEK_SET);
+        fseek(fp, BLKOFFSET + add1 * BLKSIZE, SEEK_SET);
         for (; (i < len) && (tmp[i] != '\0'); i++)
             fputc(tmp[i], fp);
     }
@@ -619,7 +619,7 @@ void cat() {
 
 /*功能: 向文件中写入字符 */
 void vi() {
-    int i, inum, length;
+    int i, inum;
     open(3);
     for (i = 0; i < FILENUM; i++)
         if ((file_table[i].inum > 0) &&
@@ -631,40 +631,34 @@ void vi() {
     }
     inum = file_table[i].inum;
     if (inode_array[inum].length == 0) {
-        printf("The length you want to write(0-1024):");
-        scanf("%d", &length);
-        gets(tmp);
-        if ((length < 0) && (length > 1024)) {
-            printf("You can't creat a file which data less than 0 byte or more than 1024 bytes.'.\n");
-            return;
-        }
-        inode_array[inum].length = length;
-        inode_array[inum].address[0] = get_blknum();
-        if (length > 512)
-            inode_array[inum].address[1] = get_blknum();
-        save_inode(inum);
         printf("Input the data(Enter to end):\n");
         gets(tmp);
+        if (strlen(tmp) > BLKSIZE * 2) {
+            printf("You can't creat a file which data more than %d bytes.'.\n", BLKSIZE * 2);
+            return;
+        }
+        inode_array[inum].length = strlen(tmp);
+        inode_array[inum].address[0] = get_blknum();
+        if (strlen(tmp) > BLKSIZE)
+            inode_array[inum].address[1] = get_blknum();
+        save_inode(inum);
         write_blk(inum);
     } else {
         printf("Are you sure to write this file? Data in it will all be deleted.(y/n):");
         char choice;
         scanf("%c", &choice);
         if ((choice == 'y') || (choice == 'Y')) {
-            printf("The length you want to write(0-1024):");
-            scanf("%d", &length);
-            gets(tmp);
-            if ((length < 0) && (length > 1024)) {
-                printf("You can't creat a file which data less than 0 byte or more than 1024 bytes.'.\n");
-                return;
-            }
-            inode_array[inum].length = length;
-            inode_array[inum].address[0] = get_blknum();
-            if (length > 512)
-                inode_array[inum].address[1] = get_blknum();
-            save_inode(inum);
             printf("Input the data(Enter to end):\n");
             gets(tmp);
+            if (strlen(tmp) > BLKSIZE * 2) {
+                printf("You can't creat a file which data more than %d bytes.'.\n", BLKSIZE * 2);
+                return;
+            }
+            inode_array[inum].length = strlen(tmp);
+            inode_array[inum].address[0] = get_blknum();
+            if (strlen(tmp) > BLKSIZE)
+                inode_array[inum].address[1] = get_blknum();
+            save_inode(inum);
             write_blk(inum);
         }
     }
@@ -679,7 +673,7 @@ void delet(int innum) {
     inode_array[innum].inum = -1;
     if (inode_array[innum].length >= 0) {
         release_blk(inode_array[innum].address[0]);
-        if (inode_array[innum].length >= 512)
+        if (inode_array[innum].length >= BLKSIZE)
             release_blk(inode_array[innum].address[1]);
     }
     save_inode(innum);
