@@ -509,12 +509,12 @@ int check(int i) {
         return 0;
 }
 
-/* 功能: 打开当前目录下的文件 */
-void open(int mode) {
+/* 功能: 打开当前目录下的文件； 目前mode仅作为一个字段，无其他含义 */
+int open(int mode) {
     int i, inum, filenum, chk;
     if (cmd2.length() == 0) {
         printf("This file doesn't exist.\n");
-        return;
+        return -1;
     }
     int tmp_cur;
     string fileLoc, fileName;
@@ -540,24 +540,25 @@ void open(int mode) {
             inode_array[i].iparent == tmp_cur) //判断是否在当前目录下
             break;
     if (i == INODENUM) {
-        cout << "This is no " + fileName + " file...\n";
-        return;
+        cout << "This is no \"" + fileName + "\" file...\n";
+        return -1;
     }
     inum = i;
     chk = check(i); //检查该文件是否为当前用户的文件
     if (chk != 1) {
         printf("This file is not yours !\n");
-        return;
+        return -1;
     }
     if ((mode < 1) || (mode > 3)) {
         printf("Open mode is wrong.\n");
-        return;
+        return -1;
     }
     filenum = i;
     file_table[filenum].inum = inum;
     strcpy(file_table[filenum].file_name, inode_array[inum].file_name);
     file_table[filenum].mode = mode;
     file_table[filenum].offset = 0;
+    return 0;
 }
 
 /*功能: 关闭已经打开的文件 */
@@ -588,7 +589,10 @@ void close() {
 }
 
 void cat() {
-    open(1);
+    if(open(1) != 0) {
+        cout << "error occurs！" << endl;
+        return;
+    }
     string fileLoc, fileName;
     int tmp_cur;
     if (cmd2.find('/') != -1) {
@@ -619,8 +623,11 @@ void cat() {
 
 /*功能: 向文件中写入字符 */
 void vi() {
+    if(open(3) != 0) {
+        cout << "error occurs！" << endl;
+        return;
+    }
     int i, inum;
-    open(3);
     for (i = 0; i < FILENUM; i++)
         if ((file_table[i].inum > 0) &&
             cmd2 == file_table[i].file_name)
@@ -816,3 +823,4 @@ int main(void) {
     command();
     return 0;
 }
+
