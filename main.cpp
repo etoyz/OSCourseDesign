@@ -1,6 +1,4 @@
 ﻿#include "head.h"
-#include <cstdio>
-#include <iostream>
 
 string cmd1, cmd2;
 int cur_loc;                       // 当前目录
@@ -77,10 +75,8 @@ void format(void) {
     printf("All the old data will lost!!!\n");
     printf("Are you sure format the fileSystem?(Y/N)?");
     char choice;
-    scanf("%c", &choice);
-    gets(tmp); //更改
+    cin >> choice;
     if ((choice == 'y') || (choice == 'Y')) {
-        printf("%c", choice);
         // 打开映像文件
         fp = fopen(image_name, "w+b");
         if (fp == NULL) {
@@ -140,7 +136,9 @@ void login() {
         printf("username:");
         gets(user_name);
         printf("password:");
-        char *p = password;
+	gets(password);
+        /* windows 下可实现隐藏密码输入
+	char *p = password;
         while (*p = getch()) {
             if (*p == 0x0d) {               //当输入回车时
                 *p = '\0'; //将输入的回车符转换成字符串结束符
@@ -148,7 +146,7 @@ void login() {
             }
             printf("*"); //将输入的密码以"*"号显示
             p++;
-        }
+        }*/
         // 校验用户名、密码
         while (!feof(fp)) {
             fread(&user, sizeof(User), 1, fp);
@@ -743,41 +741,26 @@ void help() {
 // 结果: 0-12为系统命令, 13为命令错误
 int cmd_analyze() {
     string s = "";
-    int res = 0;
-    while (1) {
-        if (s.find(' ') == -1) { // 如果不含空格，则是无参数的命令
-            cmd1 = s;
-            cmd2 = "";
-        } else { //否则是有参数的命令
-            cmd1 = s.substr(0, s.find_first_of(' '));
-            cmd2 = s.substr(s.find_first_of(' ') + 1);
-        }
-        int ch = getch();
-        if (ch == 8) { //退格
-            if (!s.empty()) {
-                printf("%c", 8);
-                printf(" ");
-                printf("%c", 8);
-                s = s.substr(0, s.length() - 1);
-            }
-        } else if (ch == 13) { //回车
-            for (res = 0; res < 13; res++) {
-                if (cmd1 == Commands[res])
-                    break;
-            }
-            break;
-        } else {
-            printf("%c", ch);
-            s.push_back(ch);
-        }
+    getline(cin, s);
+    if (s.find(' ') == -1) { // 如果不含空格，则是无参数的命令
+        cmd1 = s;
+        cmd2 = "";
+    } else { //否则是有参数的命令
+        cmd1 = s.substr(0, s.find_first_of(' '));
+        cmd2 = s.substr(s.find_first_of(' ') + 1);
     }
-    printf("\n");
-    return res;
+    int choice;
+    for (choice = 0; choice < 13; choice++) {
+        if (cmd1 == Commands[choice])
+            break;
+	}
+    return choice;
 }
 
 // 功能: 循环执行用户输入的命令
 void command(void) {
-    system("cls");
+    //system("cls");
+    system("clear");
     printf("Login success!\n");
     printf("Type \"help\" for more info.\n\n");
     do {
@@ -808,7 +791,7 @@ void command(void) {
                 rmfile();
                 break;
             case 8:
-                system("cls");
+                system("clear");
                 break;
             case 9:
                 format();

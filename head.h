@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <conio.h>
+//#include <curses.h>
 #include <string.h>
 #include <string>
 #include <iostream>
 #include <vector>
+
 using namespace std;
+
 #define BLKSIZE    512		// 数据块的大小 
 #define BLKNUM     512		// 数据块的块数
 #define INODESIZE  32		// i节点的大小
@@ -72,3 +74,29 @@ void command(void);
 void rd();
 void quit();
 void df();
+// linux上的getch函数
+#include <unistd.h>
+#include <termios.h>
+
+char getch()
+{
+    char buf = 0;
+    struct termios old = {0};
+    fflush(stdout);
+    if(tcgetattr(0, &old) < 0)
+        perror("tcsetattr()");
+    old.c_lflag &= ~ICANON;
+    old.c_lflag &= ~ECHO;
+    old.c_cc[VMIN] = 1;
+    old.c_cc[VTIME] = 0;
+    if(tcsetattr(0, TCSANOW, &old) < 0)
+        perror("tcsetattr ICANON");
+    if(read(0, &buf, 1) < 0)
+        perror("read()");
+    old.c_lflag |= ICANON;
+    old.c_lflag |= ECHO;
+    if(tcsetattr(0, TCSADRAIN, &old) < 0)
+        perror("tcsetattr ~ICANON");
+    printf("%c\n", buf);
+    return buf;
+ }
