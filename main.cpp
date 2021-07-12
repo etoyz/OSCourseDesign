@@ -1,4 +1,4 @@
-﻿#include "head.h"
+#include "head.h"
 
 string cmd1, cmd2;
 int cur_loc;                       // 当前目录
@@ -129,28 +129,17 @@ void login() {
     int flag = 0;
     char user_name[10];
     char password[10];
-    char choice; //选择是否（y/n）
     do {
         // 输入用户名、密码
         printf("Please Login First!\n");
         printf("username:");
         gets(user_name);
         printf("password:");
-	gets(password);
-        /* windows 下可实现隐藏密码输入
-	char *p = password;
-        while (*p = getch()) {
-            if (*p == 0x0d) {               //当输入回车时
-                *p = '\0'; //将输入的回车符转换成字符串结束符
-                break;
-            }
-            printf("*"); //将输入的密码以"*"号显示
-            p++;
-        }*/
+	    gets(password);
         // 校验用户名、密码
-        while (!feof(fp)) {
-            fread(&user, sizeof(User), 1, fp);
-            // 已经存在的用户, 且密码正确
+        while (1) {
+            size_t n = fread(&user, sizeof(User), 1, fp);
+	    // 已经存在的用户, 且密码正确
             if (!strcmp(user.user_name, user_name) &&
                 !strcmp(user.password, password)) {
                 fclose(fp);
@@ -165,7 +154,7 @@ void login() {
                 break;
             }
                 // 不存在的用户名
-            else {
+            if(n == 0) {
                 printf("\nThis user doesn't exist.\n");
                 break; //用户不存在，先跳出循环创建新用户
             }
@@ -174,7 +163,8 @@ void login() {
     // 创建新用户
     if (flag == 0) {
         printf("\nDo you want to creat a new user?(y/n):");
-        scanf("%c", &choice);
+        char choice; //选择是否（y/n）
+        cin >> choice; getchar();
         if ((choice == 'y') || (choice == 'Y')) {
             strcpy(user.user_name, user_name);
             strcpy(user.password, password);
@@ -221,7 +211,7 @@ void df() {
     cout << "Store use:" << cnt_mem << "/" << BLKNUM << endl;
 }
 
-// 功能: 将num号i节点保存到hd.dat
+// 功能: 将num号i节点保存到磁盘
 void save_inode(int num) {
     if ((fp = fopen(image_name, "r+b")) == NULL) {
         printf("Can't open file %s\n", image_name);
@@ -285,7 +275,7 @@ void read_blk(int num) {
     fclose(fp);
 }
 
-// 功能: 将tmp的内容输入hd的数据区
+// 功能: 将tmp的内容输入磁盘的数据区
 void write_blk(int num) {
     int i, len;
     int add0, add1;
@@ -365,15 +355,16 @@ void dir(void) {
             return;
         }
     }
+    printf("Name\t\tType\t\tUseage\t\tOwner\n", inode_array[i].file_name, inode_array[i].user_name);
     for (i = 0; i < INODENUM; i++) {
         if ((inode_array[i].inum > 0) &&                          // 有效节点
             (inode_array[i].iparent == tmp_cur)                      // 当前目录下
-            && !strcmp(inode_array[i].user_name, user.user_name)) // 属于当前用户
-        {
+           // && !strcmp(inode_array[i].user_name, user.user_name)) // 属于当前用户
+	){
             if (inode_array[i].type == 'd')
-                printf("%s\t\t\t<DIR>\n", inode_array[i].file_name);
+                printf("%s\t\t<DIR>\t\t---\t\t%s\n", inode_array[i].file_name, inode_array[i].user_name);
             if (inode_array[i].type == '-')
-                printf("%s\t\t%12d bytes\n", inode_array[i].file_name, inode_array[i].length);
+                printf("%s\t\t<FILL>\t\t%2d bytes\t%s\n", inode_array[i].file_name, inode_array[i].length, inode_array[i].user_name);
         }
     }
 }
@@ -422,7 +413,7 @@ void mkdir(void) {
     }
     for (i = 0; i < INODENUM; i++) { // 遍历i节点数组, 查找未用的i节点
         if (inode_array[i].iparent == cur_loc && inode_array[i].type == 'd' && inode_array[i].file_name == cmd2 &&
-            inode_array[i].inum > 0 && !strcmp(inode_array[i].user_name, user.user_name)) {
+            inode_array[i].inum > 0) {
             break;
         }
     }
@@ -471,8 +462,7 @@ void touch(void) {
         if ((inode_array[i].inum > 0) &&                       // 有效节点
             (inode_array[i].type == '-') &&                       // 文件类型
             fileName == inode_array[i].file_name &&               // 文件名相同
-            inode_array[i].iparent == tmp_cur &&               // 目录符合
-            !strcmp(inode_array[i].user_name, user.user_name)) // 属于当前用户
+            inode_array[i].iparent == tmp_cur)               // 目录符合
             break;
     if (i != INODENUM) {
         printf("The file name already exists\n");
@@ -500,13 +490,10 @@ void touch(void) {
 int check(int i) {
     int j;
     char *uuser, *fuser;
-    uuser = user.user_name;
-    fuser = inode_array[i].user_name;
-    j = strcmp(fuser, uuser);
-    if (j == 0)
-        return 1;
-    else
+    if(strcmp(user.user_name, inode_array[i].user_name))
         return 0;
+    else
+        return 1;
 }
 
 /* 功能: 打开当前目录下的文件； 目前mode仅作为一个字段，无其他含义 */
@@ -532,13 +519,13 @@ int open(int mode) {
         fileName = cmd2;
         tmp_cur = cur_loc;
     }
-    for (i = 0; i < INODENUM; i++)
+    for (i = 0; i < INODENUM; i++){
         if ((inode_array[i].inum > 0) &&
             (inode_array[i].type == '-') &&
             fileName == inode_array[i].file_name &&
-            !strcmp(inode_array[i].user_name, user.user_name) &&
             inode_array[i].iparent == tmp_cur) //判断是否在当前目录下
             break;
+    }
     if (i == INODENUM) {
         cout << "This is no \"" + fileName + "\" file...\n";
         return -1;
@@ -546,7 +533,7 @@ int open(int mode) {
     inum = i;
     chk = check(i); //检查该文件是否为当前用户的文件
     if (chk != 1) {
-        printf("This file is not yours !\n");
+        printf("Permission denied! This file is owned by %s!\n", inode_array[i].user_name);
         return -1;
     }
     if ((mode < 1) || (mode > 3)) {
@@ -823,4 +810,5 @@ int main(void) {
     command();
     return 0;
 }
+
 
